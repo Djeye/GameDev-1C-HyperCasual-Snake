@@ -1,8 +1,7 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
-namespace snake
+namespace snake.Snake
 {
     public class PlayerMovement : MonoBehaviour
     {
@@ -10,33 +9,62 @@ namespace snake
         private InputManager _inputManager;
         private SnakePhysics _snakePhysics;
         private Transform _snakeHead;
-
+        private float _snakeSpeed, _startSnakeSpeed;
+        
         private void Awake()
         {
             _inputManager = GetComponent<InputManager>();
             _snakePhysics = GetComponent<SnakePhysics>();
         }
 
-        void Start()
+        private void Start()
         {
             _snakeHead = _snakePhysics.GetSnakeHead();
+            _startSnakeSpeed = _snakePhysics.GetSnakeSpeed();
+            _snakeSpeed = _startSnakeSpeed;
+            
+            Core.feverEvent += EnterFever;
         }
 
-        // Update is called once per frame
-        void Update()
+        private void Update()
         {
-            Movement();
+            if (Core.IsGameEnded) return;
+            ApplyMovement();
         }
 
-        private void Movement()
+        private void ApplyMovement()
         {
-            _snakeHead.position += new Vector3(0, 0, _snakePhysics.GetSnakeSpeed() * Time.deltaTime);
+            var position = _snakeHead.position;
+            
+            var horizontalInput = _inputManager.GetPointerDown() && !Core.IsFever ? 
+                Mathf.SmoothStep(-3.6f, 3.6f, _inputManager.GetPointerPosition()) : position.x;
 
-            if (_inputManager.GetPointerDown())
-            {
-                var _horizontalInput = Mathf.SmoothStep(-3.6f, 3.6f, _inputManager.GetPointerPosition());
-                _snakeHead.position = new Vector3(_horizontalInput, _snakeHead.position.y, _snakeHead.position.z);
-            }
+            position = new Vector3(horizontalInput, position.y, position.z + _snakeSpeed * Time.deltaTime);
+            
+            _snakeHead.position = position;
+        }
+        
+        private void EnterFever()
+        {
+            StartCoroutine(FeverCoroutine());
+        }
+
+        private IEnumerator FeverCoroutine()
+        {
+            _snakeHead.position = new Vector3(0, _snakeHead.position.y, _snakeHead.position.z);
+            _snakeSpeed = 3 * _startSnakeSpeed;
+            _snakePhysics.SetSnakeSpeed(_snakeSpeed);
+            
+            yield return new WaitForSeconds(3f);
+
+            _snakeSpeed = _startSnakeSpeed;
+            _snakePhysics.SetSnakeSpeed(_snakeSpeed);
+            Core.ExitFever();
+        }
+
+        private void OnDisable()
+        {
+            Core.feverEvent -= EnterFever;
         }
     }
 }

@@ -1,14 +1,12 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
-namespace snake
+namespace snake.Snake
 {
     public class SnakeHead : MonoBehaviour
     {
         private SnakePhysics _snakePhysics;
 
-        void Awake()
+        private void Awake()
         {
             _snakePhysics = GetComponentInParent<SnakePhysics>();
         }
@@ -17,14 +15,33 @@ namespace snake
         {
             if (other.TryGetComponent(out Colorful component))
             {
-                if (component.GetColor().Equals(_snakePhysics.GetColor()))
-                _snakePhysics.AddSegment();
-                Destroy(component.gameObject);
+                if (component.GetColor().Equals(_snakePhysics.GetColor()) || Core.IsFever)
+                {
+                    _snakePhysics.AddSegment();
+                    Core.AddDeathScore();
+                    Destroy(component.gameObject);
+                } else
+                {
+                    Core.EndGame();
+                }
             }
             else if (other.TryGetComponent(out PortalManager portal))
             {
                 _snakePhysics.ColorSegments(portal.GetPortalColor());
             }
-        }
+            else if (other.TryGetComponent(out Spikes spikes))
+            {
+                if (Core.IsFever) 
+                    Destroy(spikes.gameObject);
+                else 
+                    Core.EndGame();
+            }
+            else if (other.TryGetComponent(out Crystal crystal))
+            {
+                Core.AddCrystalScore();
+                Destroy(crystal.gameObject);
+            }
+            else if (other.TryGetComponent(out EndLevel endLevel)) Core.EndGame();
+        }   
     }
 }

@@ -1,13 +1,15 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace snake
+namespace snake.Snake
 {
     public class SnakePhysics : MonoBehaviour
     {
+        private const string UNCOLORFUL_TAG = "Uncolorful";
+        
         [SerializeField] private float headSpeed;
-
         [SerializeField] private float segmentSpeed;
         [SerializeField] private Transform head;
         [SerializeField] private Transform lastSegment, tail;
@@ -16,24 +18,24 @@ namespace snake
         private List<Transform> _snakeBody = new List<Transform>();
         private Renderer _renderer;
 
-        void Start()
+        private void Start()
         {
             _snakeBody.Add(head);
             _snakeBody.Add(lastSegment);
             _snakeBody.Add(tail);
 
-            _renderer = tail.GetComponent<Renderer>();
+            _renderer = head.GetComponentInChildren<Renderer>();
         }
 
-        // Update is called once per frame
-        void Update()
+        private void Update()
         {
+            if (Core.IsGameEnded) return;
             ApplySnakePhysics();
         }
 
         private void ApplySnakePhysics()
         {
-            for (int i = 1; i < _snakeBody.Count; i++)
+            for (var i = 1; i < _snakeBody.Count; i++)
             {
                 var vector = _snakeBody[i - 1].position - _snakeBody[i].position;
                 _snakeBody[i].position += new Vector3(vector.x * segmentSpeed * Time.deltaTime, 0, headSpeed * Time.deltaTime);
@@ -63,6 +65,11 @@ namespace snake
             return headSpeed;
         }
 
+        public void SetSnakeSpeed(float speed)
+        {
+            headSpeed = speed;
+        }
+
         public Color GetColor()
         {
             return _renderer.material.color;
@@ -70,14 +77,22 @@ namespace snake
 
         public void ColorSegments(Color color)
         {
+            StartCoroutine(SmoothColorSegments(color));
+        }
+
+        private IEnumerator SmoothColorSegments(Color color)
+        {
+            var waitTime = new WaitForSeconds(1 / headSpeed);
             var headRend = head.GetComponentsInChildren<Renderer>();
             foreach (Renderer rend in headRend)
-                if (!rend.CompareTag("Uncolorful")) rend.material.color = color;
+                if (!rend.CompareTag(UNCOLORFUL_TAG)) rend.material.color = color;
 
+            yield return waitTime;
             foreach(Transform obj in _snakeBody)
             {
                 if (obj.TryGetComponent(out Renderer rend))
                     rend.material.color = color;
+                yield return waitTime;
             }
         }
     }
